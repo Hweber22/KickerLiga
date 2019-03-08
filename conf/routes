@@ -1,0 +1,4 @@
+PUT /player/:name            controllers.LeagueController.addPlayer(name: String)
+PUT /game                    controllers.LeagueController.addGame
+GET /league/games            controllers.LeagueController.getAllGames
+GET /league/standings        controllers.LeagueController.getLeagueStandings
