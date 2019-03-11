@@ -20,6 +20,12 @@ class LeagueController @Inject()(leagueRepo: LeagueRepository)(implicit ec: Exec
     }
   }
 
+  def deletePlayer(id: String, name: String) = Action.async {
+     leagueRepo.deletePlayer(Player(id, name)).map { _ =>
+        Ok(Json.toJson(s"Player '$name' was deleted from league"))
+    }
+  }
+
   def addGame = Action(parse.json).async { implicit request =>
     import model.GameFormat._
 
@@ -39,6 +45,15 @@ class LeagueController @Inject()(leagueRepo: LeagueRepository)(implicit ec: Exec
     import model.GameFormat._
 
     leagueRepo.allGames
+      .map { games =>
+        Ok(Json.toJson(games))
+      }
+  }
+
+  def gamesForPlayer(id: String, name: String) = Action.async { implicit request =>
+    import model.GameFormat._
+
+    leagueRepo.gamesForPlayer(Player(id, name))
       .map { games =>
         Ok(Json.toJson(games))
       }
