@@ -16,13 +16,21 @@ class LeagueController @Inject()(leagueRepo: LeagueRepository)(implicit ec: Exec
   def addPlayer(name: String) = Action(parse.json).async {
 
     leagueRepo.addPlayer(Player(UUID.randomUUID().toString, name)).map { _ =>
-      Ok(Json.toJson(s"Player '$name' saved to league"))
+      Created(Json.toJson(s"Player '$name' saved to league"))
     }
   }
 
-  def deletePlayer(id: String, name: String) = Action.async {
-     leagueRepo.deletePlayer(Player(id, name)).map { _ =>
-        Ok(Json.toJson(s"Player '$name' was deleted from league"))
+  def deletePlayer(id: String) = Action.async {
+
+    leagueRepo.findPlayerByID(id).flatMap { stringOrPlayer =>
+      stringOrPlayer.fold(
+        error =>
+          Future.successful(BadRequest(Json.toJson(error))),
+        player =>
+          leagueRepo.deletePlayer(player)
+      )
+    }.map { _ =>
+      Ok(Json.toJson(s"Player was deleted from league"))
     }
   }
 
@@ -50,13 +58,18 @@ class LeagueController @Inject()(leagueRepo: LeagueRepository)(implicit ec: Exec
       }
   }
 
-  def gamesForPlayer(id: String, name: String) = Action.async { implicit request =>
+  def gamesForPlayer(id: String) = Action.async { implicit request =>
     import model.GameFormat._
 
-    leagueRepo.gamesForPlayer(Player(id, name))
-      .map { games =>
-        Ok(Json.toJson(games))
-      }
+    leagueRepo.findPlayerByID(id).flatMap { stringOrPlayer =>
+      stringOrPlayer.fold(
+        error =>
+          Future.successful(BadRequest(Json.toJson(error))),
+        player =>
+          leagueRepo.gamesForPlayer(player).
+            map { games => Ok(Json.toJson(games)) }
+      )
+    }
   }
 
   def getLeagueStandings = Action.async { implicit request =>

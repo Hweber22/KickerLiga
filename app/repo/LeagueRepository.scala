@@ -1,9 +1,8 @@
 package repo
 
-import java.util.UUID
-
 import javax.inject.Inject
 import model._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,14 +19,22 @@ trait LeagueRepository {
   def gamesForPlayer(player: Player): Future[List[Game]]
 
   def allPlayersWithElos: Future[ListMap[Player, Int]]
+
+  def findPlayerByID(id: String): Future[Either[String, Player]]
 }
 
-class LeagueRepositoryImpl @Inject()(implicit ec: ExecutionContext) extends LeagueRepository {
+class LeagueRepositoryImpl @Inject()(implicit ec: ExecutionContext) extends LeagueRepository with LazyLogging {
   var league = League.empty
 
   override def addPlayer(player: Player): Future[Unit] =
     Future.successful {
-      league = League(league.games, league.players + (player -> 1500))
+      val playerNames = league.players.keys.map(player => player.name.toLowerCase).toList
+      if(playerNames.contains(player.name.toLowerCase)) {
+        logger.warn("Could not add this player to the league as the name is already taken")
+        league = league
+      }
+      else
+        league = League(league.games, league.players + (player -> 1500))
     }
 
   override def deletePlayer(player: Player): Future[Unit] =
@@ -35,8 +42,10 @@ class LeagueRepositoryImpl @Inject()(implicit ec: ExecutionContext) extends Leag
       val activatedPlayers = league.games.flatMap { game =>
         game.leftSide ++ game.rightSide
       }
-      if (activatedPlayers.contains(player))
+      if (activatedPlayers.contains(player)) {
+        logger.warn("Can not delete a player who has already played a game")
         league = league
+      }
       else
         league = League(league.games, league.players.filter(p => p._1 != player))
     }
@@ -58,4 +67,12 @@ class LeagueRepositoryImpl @Inject()(implicit ec: ExecutionContext) extends Leag
     }
 
   override def allPlayersWithElos: Future[ListMap[Player, Int]] = Future.successful(League.sortTable(league.players))
+
+  override def findPlayerByID(id: String): Future[Either[String, Player]] =
+    Future.successful {
+      league.players.keys.filter(player => player.id == id).toList match {
+        case List() => Left("Can not find player with this id")
+        case x => Right(x.head)
+      }
+    }
 }
