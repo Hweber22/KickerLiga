@@ -1,6 +1,7 @@
 PUT        /player/:name            controllers.LeagueController.addPlayer(name: String)
 DELETE     /player/:id              controllers.LeagueController.deletePlayer(id: String)
 PUT        /game                    controllers.LeagueController.addGame
+DELETE     /game                    controllers.LeagueController.deleteGame
 GET        /league/games            controllers.LeagueController.getAllGames
 GET        /games/:id               controllers.LeagueController.gamesForPlayer(id: String)
 GET        /league/standings        controllers.LeagueController.getLeagueStandings

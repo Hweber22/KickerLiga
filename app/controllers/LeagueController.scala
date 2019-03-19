@@ -49,6 +49,21 @@ class LeagueController @Inject()(leagueRepo: LeagueRepository)(implicit ec: Exec
     }
   }
 
+  def deleteGame = Action(parse.json).async { implicit request =>
+    import model.GameFormat._
+
+    Json.fromJson[Game](request.body) match {
+      case JsSuccess(game, _) =>
+
+        leagueRepo.deleteGame(game).map { _ =>
+          Ok(Json.toJson(s"Game deleted"))
+        }
+
+      case JsError(errors) =>
+        Future.successful(BadRequest(Json.toJson(errors.mkString(","))))
+    }
+  }
+
   def getAllGames = Action.async { implicit request =>
     import model.GameFormat._
 

@@ -14,6 +14,8 @@ trait LeagueRepository {
 
   def addGame(game: Game): Future[Unit]
 
+  def deleteGame(game: Game): Future[Unit]
+
   def allGames: Future[List[Game]]
 
   def gamesForPlayer(player: Player): Future[List[Game]]
@@ -54,6 +56,19 @@ class LeagueRepositoryImpl @Inject()(implicit ec: ExecutionContext) extends Leag
     Future.successful {
       league = League.addGame(game, league)
     }
+
+  override def deleteGame(game: Game): Future[Unit] = {
+    def refillLeague(games: List[Game], league: League): League = games match {
+      case List() => league
+      case x => refillLeague(games.tail, League.addGame(games.head, league))
+    }
+    val gameList = league.games.filter(g => g != game)
+    val leveledElos = for ((player,elo) <- league.players) yield player -> 1500
+    val emptiedLeague = League(List.empty, leveledElos)
+    Future.successful {
+      league = refillLeague(gameList, emptiedLeague)
+    }
+  }
 
   override def allGames: Future[List[Game]] = Future.successful(league.games)
 
