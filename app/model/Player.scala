@@ -4,6 +4,8 @@ import play.api.libs.json.{JsValue, Json}
 
 case class Player(id: String, name: String)
 
+case class Player2(id: Option[Long], name: String)
+
 object PlayerFormat {
 
   implicit val playerFormat = Json.format[Player]
