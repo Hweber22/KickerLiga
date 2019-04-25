@@ -4,10 +4,19 @@ import javax.inject.Inject
 import model._
 import com.typesafe.scalalogging.LazyLogging
 
+import anorm.SqlParser.get
+import anorm._
+import play.api.db.DBApi
+
 import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContext, Future}
 
 trait LeagueRepository {
+
+  def findPlayerById(id: Long): Future[Option[Player2]]
+
+  def insertPlayer(player: Player2): Future[Option[Long]]
+
   def addPlayer(player: Player): Future[Unit]
 
   def deletePlayer(player: Player): Future[Unit]
@@ -25,8 +34,32 @@ trait LeagueRepository {
   def findPlayerByID(id: String): Future[Either[String, Player]]
 }
 
-class LeagueRepositoryImpl @Inject()(implicit ec: ExecutionContext) extends LeagueRepository with LazyLogging {
+class LeagueRepositoryImpl @Inject()(dbApi: DBApi)(implicit ec: ExecutionContext) extends LeagueRepository with LazyLogging {
   var league = League.empty
+  val db = dbApi.database("default")
+
+  val playerParser = {
+    (get[Option[Long]]("player.id") ~
+      get[String]("player.name")). map {
+      case id ~ name =>
+        Player2(id, name)
+    }
+  }
+
+  override def findPlayerById(id: Long) = Future {
+    db.withConnection { implicit connection =>
+      SQL"select * from player where id = $id".as(playerParser.singleOpt)
+    }
+  }(ec)
+
+  override def insertPlayer(player: Player2) = Future {
+    db.withConnection { implicit connection =>
+      implicit val toParams = Macro.toParameters[Player2]
+      SQL(
+        """insert into player (id, name) values (nextval('player_id_seq'), {name});"""
+      ).bind(player).executeInsert()
+    }
+  }(ec)
 
   override def addPlayer(player: Player): Future[Unit] =
     Future.successful {

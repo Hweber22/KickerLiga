@@ -13,6 +13,22 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class LeagueController @Inject()(leagueRepo: LeagueRepository)(implicit ec: ExecutionContext) extends InjectedController {
 
+  def createPlayer2(name: String) = Action(parse.json).async {
+    leagueRepo.insertPlayer(Player2(id = None, name)).map { id =>
+      Created(Json.toJson(s"Player '$name' saved to league with id '$id'"))
+    }
+  }
+
+  def getPlayer2(id: Long) = Action(parse.json).async {
+    leagueRepo.findPlayerById(id).map { maybePlayer =>
+      maybePlayer.map { player =>
+        Ok(s"found $player")
+      }.getOrElse {
+        NotFound
+      }
+    }
+  }
+
   def addPlayer(name: String) = Action(parse.json).async {
 
     leagueRepo.addPlayer(Player(UUID.randomUUID().toString, name)).map { _ =>
